@@ -7,7 +7,12 @@ const PDFDocument = require("pdfkit");
 require("dotenv").config();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://neuro-swift.vercel.app/",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // ── Connect MongoDB ───────────────────────────────────────
@@ -73,7 +78,9 @@ function buildReportPDFBuffer(report) {
     doc.text(`Generated: ${new Date().toLocaleString()}`);
     doc.text(`Patient Name: ${report.patientName || "N/A"}`);
     doc.text(`Patient Age: ${report.patientAge || "N/A"}`);
-    doc.text(`Doctor: ${report.doctorName || "N/A"} (${report.doctorEmail || "N/A"})`);
+    doc.text(
+      `Doctor: ${report.doctorName || "N/A"} (${report.doctorEmail || "N/A"})`,
+    );
     doc.text(`Scan File: ${report.filename || "N/A"}`);
 
     doc.moveDown(1);
@@ -86,7 +93,10 @@ function buildReportPDFBuffer(report) {
     doc.moveDown(1);
     doc.fontSize(13).fillColor("#1E3A8A").text("Subtype Confidence Breakdown");
     if (!Array.isArray(report.confidences) || report.confidences.length === 0) {
-      doc.fontSize(11).fillColor("#475569").text("No subtype confidence data available.");
+      doc
+        .fontSize(11)
+        .fillColor("#475569")
+        .text("No subtype confidence data available.");
     } else {
       report.confidences.forEach((item) => {
         const pct = Math.round((item?.confidence || 0) * 100);
@@ -179,8 +189,14 @@ app.post("/api/doctor/login", async (req, res) => {
 // Save report
 app.post("/api/reports", protect, async (req, res) => {
   try {
-    const { patientName, patientAge, diagnosis, confidences, filename, reportPdfBase64 } =
-      req.body;
+    const {
+      patientName,
+      patientAge,
+      diagnosis,
+      confidences,
+      filename,
+      reportPdfBase64,
+    } = req.body;
     if (!patientName || !diagnosis)
       return res
         .status(400)
@@ -259,7 +275,9 @@ app.get("/api/doctor/reports", protect, async (req, res) => {
   try {
     const reports = await Report.find({ doctorEmail: req.doctor.email })
       .sort({ createdAt: -1 })
-      .select("patientId patientName patientAge diagnosis confidences createdAt");
+      .select(
+        "patientId patientName patientAge diagnosis confidences createdAt",
+      );
     res.json(reports);
   } catch (err) {
     res.status(500).json({ error: err.message });
